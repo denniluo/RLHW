@@ -21,10 +21,11 @@ horizon = 100
 episode_count = 10000
 
 environment = CartPole(verbose=verbose)
-
+eps = 0.1
+gam = 0.1
 agent = EpisodicQLearning(num_action=len(environment.action_space),
                     feature_extractor=TabularFeatures(5, 5, 11, 11),
-                    epsilon=eps)
+                    epsilon=eps, gamma=gam)
 
 
 state_action_list_per_episode = [[] for episode in range(episode_count)]
