@@ -32,8 +32,15 @@ class Agent(object):
 
   def _random_argmax(self, vector):
     """Helper function to select argmax at random... not just first one."""
-    # TODO(Implement _random_argmax)
-    pass
+    q = vector
+    maxQ = max(q)
+    count = q.count(maxQ)
+    if count > 1:
+      best = [i for i in range(len(q)) if q[i] == maxQ]
+      i = np.random.choice(best)
+    else:
+      i = q.index(maxQ)
+    return i
 
   def _egreedy_action(self, q_vals, epsilon):
     """Epsilon-greedy dithering action selection.
@@ -43,8 +50,11 @@ class Agent(object):
     Returns:
       action: integer index for action selection
     """
-    # TODO(Implement _egreedy_action)
-    pass
+    if np.random.random() < epsilon:
+      action_idx = np.random.choice(len(q_vals))
+    else:
+      action_idx = self._random_argmax(q_vals)
+    return action_idx
 
 
   def _boltzmann_action(self, q_vals, beta):
@@ -55,8 +65,9 @@ class Agent(object):
     Returns:
       action - integer index for action selection
     """
-    # TODO(Implement _boltzmann_action)
-    pass
+    pmf = np.exp(q_vals / beta) / sum(np.exp(q_vals / beta))
+    action_idx = np.random.choice(len(q_vals), p = pmf)
+    return action_idx
 
 
 class RandomAgent(Agent):
@@ -89,48 +100,83 @@ class ConstantAgent(Agent):
 
 
 # TODO(Implement EpisodicQLearning)
-#class EpisodicQLearning(Agent):
+class EpisodicQLearning(Agent):
+  def __init__(self, num_action, feature_extractor, epsilon=0.1, gamma=0.2, beta=2):
+    self.q = {}
+    self.feature_extractor = feature_extractor
+    self.epsilon = epsilon
+    self.gamma = gamma
+    self.num_action = num_action
+    self.beta = beta
 
-
-# TODO(Implement SARSA)
-class SARSA(Agent):
-  def __init__(self, actions, epsilon=0.1, alpha=0.2, gamma=0.9):
-      self.q = {}
-
-      self.epsilon = epsilon
-      self.alpha = alpha
-      self.gamma = gamma
-      self.actions = actions
+  def __str__(self):
+    return "QLearningAgent(|A|={})".format(self.num_action)
 
   def getQ(self, state, action):
-      return self.q.get((state, action), 0.0)
+    return self.q.get((state, action), 0.0)
+
+  def pick_action(self, obs, **kwargs):
+    state = self.feature_extractor.get_feature(obs)
+    q = [self.getQ(state, a) for a in range(self.num_action)]
+    action_idx = self._egreedy_action(q, self.epsilon)
+    return action_idx
+
+  def learn(self, state1, action1, reward, state2):
+    q_vals = [self.getQ(state2, a) for a in range(self.num_action)]
+    oldq = self.q.get((state1, action1), None)
+    if oldq is None:
+      self.q[(state1, action1)] = reward 
+    else:
+      self.q[(state1, action1)] = (1 - self.gamma) * oldq + self.gamma * (reward + max(q_vals))
+
+  def update_observation(self, obs, action, reward, new_obs, p_continue,
+                         **kwargs):
+
+    if p_continue == 1:
+      state1 = self.feature_extractor.get_feature(obs)
+      state2 = self.feature_extractor.get_feature(new_obs)
+      self.learn(state1, action, reward, state2)
+
+
+class SARSA(Agent):
+  def __init__(self, num_action, feature_extractor, epsilon=0.1, gamma=0.2, beta=2):
+    self.q = {}
+    self.feature_extractor = feature_extractor
+    self.epsilon = epsilon
+    self.gamma = gamma
+    self.num_action = num_action
+    self.beta = beta
+
+  def __str__(self):
+    return "SARSAAgent(|A|={})".format(self.num_action)
+
+  def getQ(self, state, action):
+    return self.q.get((state, action), 0.0)
 
   def learnQ(self, state, action, reward, value):
-      oldv = self.q.get((state, action), None)
-      if oldv is None:
-          self.q[(state, action)] = reward 
-      else:
-          self.q[(state, action)] = oldv + self.alpha * (value - oldv)
+    oldv = self.q.get((state, action), None)
+    if oldv is None:
+      self.q[(state, action)] = reward 
+    else:
+      self.q[(state, action)] = oldv + self.gamma * (value - oldv)
 
-  def chooseAction(self, state):
-      if random.random() < self.epsilon:
-          action = random.choice(self.actions)
-      else:
-          q = [self.getQ(state, a) for a in self.actions]
-          maxQ = max(q)
-          count = q.count(maxQ)
-          if count > 1:
-              best = [i for i in range(len(self.actions)) if q[i] == maxQ]
-              i = random.choice(best)
-          else:
-              i = q.index(maxQ)
-
-          action = self.actions[i]
-      return action
+  def pick_action(self, obs, **kwargs):
+    state = self.feature_extractor.get_feature(obs)
+    q = [self.getQ(state, a) for a in range(self.num_action)]
+    action_idx = self._egreedy_action(q, self.epsilon)
+    return action_idx
 
   def learn(self, state1, action1, reward, state2, action2):
-      qnext = self.getQ(state2, action2)
-      self.learnQ(state1, action1, reward, reward + self.gamma * qnext)
+    qnext = self.getQ(state2, action2)
+    self.learnQ(state1, action1, reward, reward + qnext)
+
+  def update_observation(self, obs, action, reward, new_obs, p_continue, new_action,
+                         **kwargs):
+
+    if p_continue == 1:
+      state1 = self.feature_extractor.get_feature(obs)
+      state2 = self.feature_extractor.get_feature(new_obs)
+      self.learn(state1, action, reward, state2, new_action)
 
 ###############################################################################
 class FeatureExtractor(object):

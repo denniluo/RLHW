@@ -6,7 +6,7 @@ Created on Thu Apr 19 15:34:50 2018
 """
 
 from environments import CartPole
-from agents import ConstantAgent, RandomAgent
+from agents import ConstantAgent, RandomAgent, SARSA, EpisodicQLearning
 from agents import TabularFeatures
 
 import numpy as np
@@ -21,15 +21,18 @@ horizon = 100
 episode_count = 10000
 
 environment = CartPole(verbose=verbose)
-agent = RandomAgent(num_action=len(environment.action_space),
-                    feature_extractor=TabularFeatures(5, 5, 11, 11))
+
+agent = EpisodicQLearning(num_action=len(environment.action_space),
+                    feature_extractor=TabularFeatures(5, 5, 11, 11),
+                    epsilon=eps)
 
 
 state_action_list_per_episode = [[] for episode in range(episode_count)]
 reward_per_episode = np.zeros(episode_count)
 
 for episode in range(episode_count):
-  print("********** EPISODE l={} START *************".format(episode))
+  if verbose:
+    print("********** EPISODE l={} START *************".format(episode))
 
   # Initialize state and time period.
   current_state = environment.reset()
@@ -62,11 +65,12 @@ for episode in range(episode_count):
     time += 1
     # Continue or stop the episode.
     terminate = np.random.random() > p_continue or time >= horizon
-    if terminate:
+    if terminate and verbose:
       print("********** EPISODE l={} END *************\n" \
           "episode_reward={}, cumulative_reward={}\n"
           .format(episode, reward_per_episode[episode],
                   np.cumsum(reward_per_episode)[episode]))
+    if terminate:
       break
 
 
