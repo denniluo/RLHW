@@ -101,7 +101,8 @@ class ConstantAgent(Agent):
 
 # TODO(Implement EpisodicQLearning)
 class EpisodicQLearning(Agent):
-  def __init__(self, num_action, feature_extractor, epsilon=0.1, gamma=0.2, beta=2):
+  def __init__(self, num_action, feature_extractor, gamma=0.2, epsilon=None, beta=None):
+    assert int(epsilon is None) + int(beta is None) == 1
     self.q = {}
     self.feature_extractor = feature_extractor
     self.epsilon = epsilon
@@ -118,7 +119,10 @@ class EpisodicQLearning(Agent):
   def pick_action(self, obs, **kwargs):
     state = self.feature_extractor.get_feature(obs)
     q = [self.getQ(state, a) for a in range(self.num_action)]
-    action_idx = self._egreedy_action(q, self.epsilon)
+    if self.epsilon is not None:
+      action_idx = self._egreedy_action(q, self.epsilon)
+    else:
+      action_idx = self._boltzmann_action(q, self.beta)
     return action_idx
 
   def learn(self, state1, action1, reward, state2):
@@ -139,7 +143,8 @@ class EpisodicQLearning(Agent):
 
 
 class SARSA(Agent):
-  def __init__(self, num_action, feature_extractor, epsilon=0.1, gamma=0.2, beta=2):
+  def __init__(self, num_action, feature_extractor, gamma=0.2, epsilon=None, beta=None):
+    assert int(epsilon is None) + int(beta is None) == 1
     self.q = {}
     self.feature_extractor = feature_extractor
     self.epsilon = epsilon
@@ -163,7 +168,10 @@ class SARSA(Agent):
   def pick_action(self, obs, **kwargs):
     state = self.feature_extractor.get_feature(obs)
     q = [self.getQ(state, a) for a in range(self.num_action)]
-    action_idx = self._egreedy_action(q, self.epsilon)
+    if self.epsilon is not None:
+      action_idx = self._egreedy_action(q, self.epsilon)
+    else:
+      action_idx = self._boltzmann_action(q, self.beta)
     return action_idx
 
   def learn(self, state1, action1, reward, state2, action2):
