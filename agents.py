@@ -65,6 +65,7 @@ class Agent(object):
     Returns:
       action - integer index for action selection
     """
+    q_vals = [q - max(q_vals) for q in q_vals]
     pmf = np.exp(q_vals / beta) / sum(np.exp(q_vals / beta))
     action_idx = np.random.choice(len(q_vals), p = pmf)
     return action_idx
@@ -120,26 +121,25 @@ class EpisodicQLearning(Agent):
     state = self.feature_extractor.get_feature(obs)
     q = [self.getQ(state, a) for a in range(self.num_action)]
     if self.epsilon is not None:
-      action_idx = self._egreedy_action(q, self.epsilon)
+      action_idx = self._egreedy_action(q, self.epsilon * (1 - kwargs['episode'] / 10000.0))
     else:
-      action_idx = self._boltzmann_action(q, self.beta)
+      action_idx = self._boltzmann_action(q, self.beta * (1 - kwargs['episode'] / 10000.0))
     return action_idx
 
-  def learn(self, state1, action1, reward, state2):
+  def learn(self, state1, action1, reward, state2, episode):
     q_vals = [self.getQ(state2, a) for a in range(self.num_action)]
     oldq = self.q.get((state1, action1), None)
     if oldq is None:
       self.q[(state1, action1)] = reward 
     else:
-      self.q[(state1, action1)] = (1 - self.gamma) * oldq + self.gamma * (reward + max(q_vals))
+      self.q[(state1, action1)] = oldq + self.gamma * (reward + max(q_vals) - oldq) * (1 - episode / 10000.0)
 
   def update_observation(self, obs, action, reward, new_obs, p_continue,
                          **kwargs):
-
     if p_continue == 1:
       state1 = self.feature_extractor.get_feature(obs)
       state2 = self.feature_extractor.get_feature(new_obs)
-      self.learn(state1, action, reward, state2)
+      self.learn(state1, action, reward, state2, kwargs['episode'])
 
 
 class SARSA(Agent):

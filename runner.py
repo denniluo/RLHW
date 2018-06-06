@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 19 15:34:50 2018
-
-@author: Maria Dimakopoulou
-"""
 
 from environments import CartPole
 from agents import ConstantAgent, RandomAgent, SARSA, EpisodicQLearning
@@ -23,8 +18,8 @@ environment = CartPole(verbose=verbose)
 result_qlearn_e_greedy = []
 
 experiment_counter = 0
-for eps in np.arange(0.01, 0.22, 0.2/10):
-  for gam in np.arange(0.01, 0.12, 0.1/5):
+for eps in np.arange(0.01, 0.5, 0.1):
+  for gam in np.arange(0.1, 0.5, 0.1):
     agent = EpisodicQLearning(num_action=len(environment.action_space),
                         feature_extractor=TabularFeatures(5, 5, 11, 11),
                         gamma=gam, epsilon=eps)
@@ -36,7 +31,7 @@ for eps in np.arange(0.01, 0.22, 0.2/10):
       # Initialize state and time period.
       current_state = environment.reset()
       # Pick the action
-      current_action = agent.pick_action(current_state)
+      current_action = agent.pick_action(current_state, episode=episode)
       time = 0
 
       # Run the episode.
@@ -47,13 +42,14 @@ for eps in np.arange(0.01, 0.22, 0.2/10):
         next_state = step.new_obs
         p_continue = step.p_continue
         # Pick the next action.
-        next_action = agent.pick_action(next_state)
+        next_action = agent.pick_action(next_state, episode=episode)
 
         reward_per_episode[episode] += reward
         # Update the agent.
         agent.update_observation(obs=current_state, action=current_action,
                                  reward=reward, new_obs=next_state,
-                                 p_continue=p_continue, new_action=next_action)
+                                 p_continue=p_continue, new_action=next_action,
+                                 episode=episode)
         # Update the state and the time period.
         current_state = next_state
         current_action = next_action

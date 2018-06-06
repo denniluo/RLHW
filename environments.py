@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 19 13:34:02 2018
 
-@author: Maria Dimakopoulou
-"""
 
 from gym.core import Env
 from gym.envs.classic_control import rendering
